@@ -1693,8 +1693,7 @@ Posts history: {{recentPosts}}.
 
 # Task:
 Write a news post outlining the opinion of {{agentName}}, the style and point of view of @{{twitterUserName}}. They need to be analyzed, and the post should use only the one that is closer to the style and points of view of {{agentName}}.
-If there is already a post about this news in the publication history, then you need to use the text of the previous post to create a new one. but! Only if there are any new details about the event in the news that were not mentioned in previous posts about the event. For example, "I told you it would be like this!..." or "I already wrote about this news earlier, new details have appeared..." (these are just examples, use the information about {{agentName}} to form the text in his style).
-If there is no new information in the news, there is nothing more to add, then when generating a new post, use another news item that has not yet been posted.
+If there is already a record of this news in the publication history, then you need to use another news item. Repetition of the topics of the posts is prohibited.
 In the generated post, you need to express your opinion and express your emotions. There should be no questions in your answer. Only brief statements. No emojis. Use \n\n (double spaces) between statements if there are multiple statements in your answer.`;
 var twitterActionTemplate = `
 # INSTRUCTIONS: Determine actions for {{agentName}} (@{{twitterUserName}}) based on:
@@ -1968,7 +1967,6 @@ var TwitterPostClient = class {
         )
       );
       const body = await standardTweetResult.json();
-      console.log("response: ", body.data)
       if (!body?.data?.create_tweet?.tweet_results?.result) {
         elizaLogger4.error("Error sending tweet; Bad response:", body);
         return;
@@ -2018,6 +2016,59 @@ var TwitterPostClient = class {
   /**
    * Generates and posts a new tweet. If isDryRun is true, only logs what would have been posted.
    */
+  async getCurrentNews(searchTerm2) {
+    try {
+      const enhancedSearchTerm = encodeURIComponent(`"${searchTerm2}" AND (Spain OR Spanish OR Madrid OR Felipe)`);
+
+      const [everythingResponse, headlinesResponse] = await Promise.all([
+        fetch(
+          `https://newsapi.org/v2/everything?q=${enhancedSearchTerm}&sortBy=relevancy&language=en&pageSize=50&apiKey=${process.env.NEWS_API_KEY}`
+        ),
+        fetch(
+          `https://newsapi.org/v2/top-headlines?q=${searchTerm2}&country=es&language=en&pageSize=50&apiKey=${process.env.NEWS_API_KEY}`
+        )
+      ]);
+
+      const [everythingData, headlinesData] = await Promise.all([
+        everythingResponse.json(),
+        headlinesResponse.json()
+      ]);
+
+      console.log("[everythingResponse, headlinesResponse]: ", [everythingData, headlinesData])
+
+      const allArticles = [
+        ...headlinesData.articles || [],
+        ...everythingData.articles || []
+      ].filter(
+        (article) => article.title && article.description && (article.title.toLowerCase().includes(searchTerm2.toLowerCase()) || article.description.toLowerCase().includes(searchTerm2.toLowerCase()))
+      );
+
+      const uniqueArticles = Array.from(
+        new Map(allArticles.map((article) => [article.title, article])).values()
+      ).slice(0, 15);
+      if (!uniqueArticles.length) {
+        return "No news articles found.";
+      }
+
+      return uniqueArticles.map((article, index) => {
+        const content = article.description || "No content available";
+        const urlDomain = article.url ? new URL(article.url).hostname : "";
+        return [
+          `\u{1F4F0} Article ${index + 1}`,
+          "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501",
+          `\u{1F4CC} **${article.title || "No title"}**
+`,
+          `\u{1F4DD} ${content}
+`,
+          `\u{1F517} Read more at: ${urlDomain}`
+        ].join("\n");
+      }).join("\n");
+      
+    } catch (error) {
+      console.error("Failed to fetch news:", error);
+      return "Sorry, there was an error fetching the news.";
+    }
+  }
   async generateNewTweet(isNewsPost) {
     elizaLogger4.log("Generating new tweet");
     try {
@@ -2047,20 +2098,26 @@ var TwitterPostClient = class {
           maxTweetLength
         }
       );
-      // console.log("state: ", state)
+      // console.log("state: ", state.news)
       if(isNewsPost) {
         // const formatted = templateStr.replace(/{{\w+}}/g, (match) => {
         //   const key = match.replace(/{{|}}/g, "");
         //   return state[key] ?? "";
         // });
-        state.news = newsMock
-        console.log("twitterNewsPostTemplate: ", twitterNewsPostTemplate)
+        const response = await this.getCurrentNews('world')
+        console.log("news: ", response)
+        state.news = response
       }
+      console.log("this.runtime.character.templates: ", this.runtime.character.templates)
       const context = composeContext2({
         state,
-        template: this.runtime.character.templates?.twitterPostTemplate ||(isNewsPost ? twitterNewsPostTemplate : twitterPostTemplate)
+        // template: this.runtime.character.templates?.twitterPostTemplate || twitterNewsPostTemplate
+        template: this.runtime.character.templates?.twitterPostTemplate || (isNewsPost ? twitterNewsPostTemplate : twitterPostTemplate)
       });
-      console.log('context: ', context)
+      if(isNewsPost) {
+        console.log("context: ", context)
+      }
+      // console.log('context: ', context)
       elizaLogger4.debug("generate post prompt:\n" + context);
       const response = await generateText({
         runtime: this.runtime,
