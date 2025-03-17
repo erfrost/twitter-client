@@ -14,111 +14,133 @@ import {
 } from "agent-twitter-client";
 import { EventEmitter } from "events";
 
-const newsMock = `📰 Article 1
-━━━━━━━━━━━━━━━━━━━━━━
-📌 **Ex-Spain Soccer Boss Luis Rubiales Guilty of Sexual Assault and Fined for World Cup Kiss**
+import pg from "pg";
 
-📝 Rubiales said soccer player Jenni Hermoso consented to the kiss, but she denied it.
+const { Pool } = pg;
+const pool = new Pool({
+  connectionString: process.env.POSTGRES_URL,
+});
 
-🔗 Read more at: time.com
-📰 Article 2
-━━━━━━━━━━━━━━━━━━━━━━
-📌 **Fifa to give $1bn as Europe nears Club World Cup deal**
+async function databaseRequest(query, params) {
+  let client;
+  try {
+    client = await pool.connect();
+    const res = await client.query(query, params);
+    return res.rows;
+  } catch (error) {
+    console.error("Ошибка выполнения запроса:", error);
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+}
 
-📝 Fifa are set to give more than $1bn in revenue to clubs, which is believed to be a record sum, for its summer Club World Cup.
+// const newsMock = `📰 Article 1
+// ━━━━━━━━━━━━━━━━━━━━━━
+// 📌 **Ex-Spain Soccer Boss Luis Rubiales Guilty of Sexual Assault and Fined for World Cup Kiss**
 
-🔗 Read more at: www.bbc.com
-📰 Article 3
-━━━━━━━━━━━━━━━━━━━━━━
-📌 **What to know about the case against former Spanish soccer head Luis Rubiales**
+// 📝 Rubiales said soccer player Jenni Hermoso consented to the kiss, but she denied it.
 
-📝 The former president of Spain's soccer federation was found guilty of sexual assault for kissing player Jenni Hermoso after the 2023 women's World Cup. Here's what to know about the case.
+// 🔗 Read more at: time.com
+// 📰 Article 2
+// ━━━━━━━━━━━━━━━━━━━━━━
+// 📌 **Fifa to give $1bn as Europe nears Club World Cup deal**
 
-🔗 Read more at: www.npr.org
-📰 Article 4
-━━━━━━━━━━━━━━━━━━━━━━
-📌 **Britons detained in Iran in 'distressing situation', family says**
+// 📝 Fifa are set to give more than $1bn in revenue to clubs, which is believed to be a record sum, for its summer Club World Cup.
 
-📝 They entered Iran while they were travelling across the world on motorbikes, heading for Australia.
+// 🔗 Read more at: www.bbc.com
+// 📰 Article 3
+// ━━━━━━━━━━━━━━━━━━━━━━
+// 📌 **What to know about the case against former Spanish soccer head Luis Rubiales**
 
-🔗 Read more at: www.bbc.com
-📰 Article 5
-━━━━━━━━━━━━━━━━━━━━━━
-📌 **Climb aboard Olympia, the oldest steel warship still afloat in the world**
+// 📝 The former president of Spain's soccer federation was found guilty of sexual assault for kissing player Jenni Hermoso after the 2023 women's World Cup. Here's what to know about the case.
 
-📝 The USS Olympia is best known for winning the Battle of Manila Bay and for transporting a service member's remains to the Tomb of the Unknown Soldier.
+// 🔗 Read more at: www.npr.org
+// 📰 Article 4
+// ━━━━━━━━━━━━━━━━━━━━━━
+// 📌 **Britons detained in Iran in 'distressing situation', family says**
 
-🔗 Read more at: www.businessinsider.com
-📰 Article 6
-━━━━━━━━━━━━━━━━━━━━━━
-📌 **England earn statement win over world champions Spain**
+// 📝 They entered Iran while they were travelling across the world on motorbikes, heading for Australia.
 
-📝 England secured a statement 1-0 victory over World Champions Spain to secure their first win of this season’s Nations League campaign thanks to Jess Park's first-half goal.
+// 🔗 Read more at: www.bbc.com
+// 📰 Article 5
+// ━━━━━━━━━━━━━━━━━━━━━━
+// 📌 **Climb aboard Olympia, the oldest steel warship still afloat in the world**
 
-🔗 Read more at: www.skysports.com
-📰 Article 7
-━━━━━━━━━━━━━━━━━━━━━━
-📌 **England v Spain - World Cup finalists meet again**
+// 📝 The USS Olympia is best known for winning the Battle of Manila Bay and for transporting a service member's remains to the Tomb of the Unknown Soldier.
 
-📝 Two of Europe's heavyweights go head-to-head at Wembley on Wednesday in a repeat of the Women's World Cup final as England host world champions Spain.
+// 🔗 Read more at: www.businessinsider.com
+// 📰 Article 6
+// ━━━━━━━━━━━━━━━━━━━━━━
+// 📌 **England earn statement win over world champions Spain**
 
-🔗 Read more at: www.bbc.com
-📰 Article 8
-━━━━━━━━━━━━━━━━━━━━━━
-📌 **Spain’s New Talent Revolution Hits Berlin**
+// 📝 England secured a statement 1-0 victory over World Champions Spain to secure their first win of this season’s Nations League campaign thanks to Jess Park's first-half goal.
 
-📝 Over the last six years, thanks in the main to the SVOD revolution, Spain, once known for select auteurs – Pedro Almodóvar, J.A. Bayona, Fernando Trueba – has stepped fully onto the world stage as a European film and TV power.  Appropriately then, Spain is th…
+// 🔗 Read more at: www.skysports.com
+// 📰 Article 7
+// ━━━━━━━━━━━━━━━━━━━━━━
+// 📌 **England v Spain - World Cup finalists meet again**
 
-🔗 Read more at: variety.com
-📰 Article 9
-━━━━━━━━━━━━━━━━━━━━━━
-📌 **8 cities around the world with the lowest cost of living and highest quality of life**
+// 📝 Two of Europe's heavyweights go head-to-head at Wembley on Wednesday in a repeat of the Women's World Cup final as England host world champions Spain.
 
-📝 Live your best life in these relatively affordable spots abroad, where housing, a cup of coffee, and a gym membership are cheaper than in the US.
+// 🔗 Read more at: www.bbc.com
+// 📰 Article 8
+// ━━━━━━━━━━━━━━━━━━━━━━
+// 📌 **Spain’s New Talent Revolution Hits Berlin**
 
-🔗 Read more at: www.businessinsider.com
-📰 Article 10
-━━━━━━━━━━━━━━━━━━━━━━
-📌 **Honor Earbuds Open review: Unmatched comfort, unbelievable sound**
+// 📝 Over the last six years, thanks in the main to the SVOD revolution, Spain, once known for select auteurs – Pedro Almodóvar, J.A. Bayona, Fernando Trueba – has stepped fully onto the world stage as a European film and TV power.  Appropriately then, Spain is th…
 
-📝 Honor is making a strong debut into the world of open earbuds with the Earbuds Open, combining a comfortable design with terrific sound.
+// 🔗 Read more at: variety.com
+// 📰 Article 9
+// ━━━━━━━━━━━━━━━━━━━━━━
+// 📌 **8 cities around the world with the lowest cost of living and highest quality of life**
 
-🔗 Read more at: www.androidcentral.com
-📰 Article 11
-━━━━━━━━━━━━━━━━━━━━━━
-📌 **Hermoso wants Rubiales conviction to set precedent**
+// 📝 Live your best life in these relatively affordable spots abroad, where housing, a cup of coffee, and a gym membership are cheaper than in the US.
 
-📝 Jenni Hermoso hopes an "important precedent" has been set after Luis Rubiales' conviction for kissing the Spain striker without her consent during 2023 World Cup medal ceremony.
+// 🔗 Read more at: www.businessinsider.com
+// 📰 Article 10
+// ━━━━━━━━━━━━━━━━━━━━━━
+// 📌 **Honor Earbuds Open review: Unmatched comfort, unbelievable sound**
 
-🔗 Read more at: www.bbc.com
-📰 Article 12
-━━━━━━━━━━━━━━━━━━━━━━
-📌 **'Fighting for change' - what next for Spain & Rubiales after trial?**
+// 📝 Honor is making a strong debut into the world of open earbuds with the Earbuds Open, combining a comfortable design with terrific sound.
 
-📝 550 days after kissing Jenni Hermoso on the lips on the world's biggest stage, Luis Rubiales is found guilty of sexual assault. What happens now?
+// 🔗 Read more at: www.androidcentral.com
+// 📰 Article 11
+// ━━━━━━━━━━━━━━━━━━━━━━
+// 📌 **Hermoso wants Rubiales conviction to set precedent**
 
-🔗 Read more at: www.bbc.com
-📰 Article 13
-━━━━━━━━━━━━━━━━━━━━━━
-📌 **New trial sought for ex-Spanish football boss Rubiales over World Cup kiss**
+// 📝 Jenni Hermoso hopes an "important precedent" has been set after Luis Rubiales' conviction for kissing the Spain striker without her consent during 2023 World Cup medal ceremony.
 
-📝 Prosecutors are asking for the retrial of former Spanish football president Luis Rubiales, saying the judge incorrectly kept some evidence from the court.
+// 🔗 Read more at: www.bbc.com
+// 📰 Article 12
+// ━━━━━━━━━━━━━━━━━━━━━━
+// 📌 **'Fighting for change' - what next for Spain & Rubiales after trial?**
 
-🔗 Read more at: www.skysports.com
-📰 Article 14
-━━━━━━━━━━━━━━━━━━━━━━
-📌 **Tennis' top-ranked Jannik Sinner gets a 3-month ban in doping case settlement**
+// 📝 550 days after kissing Jenni Hermoso on the lips on the world's biggest stage, Luis Rubiales is found guilty of sexual assault. What happens now?
 
-📝 Sinner accepted the ban in a settlement with the World Anti-Doping Agency. The timing of the ban means the 23-year-old Italian won't miss any Grand Slam tournaments.
+// 🔗 Read more at: www.bbc.com
+// 📰 Article 13
+// ━━━━━━━━━━━━━━━━━━━━━━
+// 📌 **New trial sought for ex-Spanish football boss Rubiales over World Cup kiss**
 
-🔗 Read more at: www.npr.org
-📰 Article 15
-━━━━━━━━━━━━━━━━━━━━━━
-📌 **Mobile World Congress 2025: More Foldable Concepts, Plus Phones and Tablets You’ll Never Get to Use**
+// 📝 Prosecutors are asking for the retrial of former Spanish football president Luis Rubiales, saying the judge incorrectly kept some evidence from the court.
 
-📝 Samsung and Lenovo had the most interesting folding concept devices to show off at the annual trade show in Barcelona.
+// 🔗 Read more at: www.skysports.com
+// 📰 Article 14
+// ━━━━━━━━━━━━━━━━━━━━━━
+// 📌 **Tennis' top-ranked Jannik Sinner gets a 3-month ban in doping case settlement**
 
-🔗 Read more at: gizmodo.com`
+// 📝 Sinner accepted the ban in a settlement with the World Anti-Doping Agency. The timing of the ban means the 23-year-old Italian won't miss any Grand Slam tournaments.
+
+// 🔗 Read more at: www.npr.org
+// 📰 Article 15
+// ━━━━━━━━━━━━━━━━━━━━━━
+// 📌 **Mobile World Congress 2025: More Foldable Concepts, Plus Phones and Tablets You’ll Never Get to Use**
+
+// 📝 Samsung and Lenovo had the most interesting folding concept devices to show off at the annual trade show in Barcelona.
+
+// 🔗 Read more at: gizmodo.com`
 
 var RequestQueue = class {
   queue = [];
@@ -417,9 +439,6 @@ var ClientBase = class _ClientBase extends EventEmitter {
             stringToUuid(tweet.id + "-" + this.runtime.agentId)
           )
         );
-        console.log({
-          processingTweets: tweetsToSave2.map((tweet) => tweet.id).join(",")
-        });
         for (const tweet of tweetsToSave2) {
           elizaLogger.log("Saving Tweet", tweet.id);
           const roomId = stringToUuid(
@@ -1695,6 +1714,24 @@ Posts history: {{recentPosts}}.
 Write a news post outlining the opinion of {{agentName}}, the style and point of view of @{{twitterUserName}}. They need to be analyzed, and the post should use only the one that is closer to the style and points of view of {{agentName}}.
 If there is already a record of this news in the publication history, then you need to use another news item. Repetition of the topics of the posts is prohibited.
 In the generated post, you need to express your opinion and express your emotions. There should be no questions in your answer. Only brief statements. No emojis. Use \n\n (double spaces) between statements if there are multiple statements in your answer.`;
+var twitterThreadTemplate = `
+# Areas of Expertise
+{{knowledge}}
+
+# About {{agentName}} (@{{twitterUserName}}):
+{{bio}}
+{{lore}}
+{{topics}}
+
+{{providers}}
+
+{{characterPostExamples}}
+
+{{postDirections}}
+
+# Task:
+Write a history of posts in a Twitter thread based on the opinion of {{agentName}} and the style of @{{twitterUserName}}. Use only the news that is closer to the style and point of view of {{agentName}}, avoiding repeating themes from previous publications.
+Each new post should be short (no more than 280 characters) and reflect opinions with emotions without questions. Separate each post with a separator '///'. At the beginning of a new post, put its number like this: "1. The text of the post... " If there is already recorded news in the publication history, use other topics.`
 var twitterActionTemplate = `
 # INSTRUCTIONS: Determine actions for {{agentName}} (@{{twitterUserName}}) based on:
 {{bio}}
@@ -1819,7 +1856,7 @@ var TwitterPostClient = class {
       await this.client.init();
     }
     let tweetCounter = 0;
-
+    // await this.onThread(this.client, this.runtime)
     const generateNewTweetLoop = async () => {
       const lastPost = await this.runtime.cacheManager.get("twitter/" + this.twitterUsername + "/lastPost");
       const lastPostTimestamp = lastPost?.timestamp ?? 0;
@@ -1827,13 +1864,26 @@ var TwitterPostClient = class {
       const maxMinutes = this.client.twitterConfig.POST_INTERVAL_MAX;
       const randomMinutes = Math.floor(Math.random() * (maxMinutes - minMinutes + 1)) + minMinutes;
       const delay = randomMinutes * 60 * 1e3;
+      // await this.getUserTweets('TestEliza57952')
+      // const dsfsf = await this.sendStandardTweet(
+      //   this.client,
+      //   'ответ)))',
+      //  '1901320561961111660'
+      // );
+      // console.log("dsfsf: ", dsfsf)
+
       if (Date.now() > lastPostTimestamp + delay) {
         tweetCounter++;
         let isNewsPost = false
-        if (tweetCounter % 2) { 
+        let isThreadPost = false
+        if (tweetCounter % 3 === 0) { 
           isNewsPost = true
         }
-        await this.generateNewTweet(isNewsPost);
+        if(tweetCounter % 5 === 0) {
+          isThreadPost = true
+        }
+
+        await this.generateNewTweet(isNewsPost, true);
       }
       setTimeout(() => {
         generateNewTweetLoop();
@@ -1977,7 +2027,7 @@ var TwitterPostClient = class {
       throw error;
     }
   }
-  async postTweet(runtime, client, tweetTextForPosting, roomId, rawTweetContent, twitterUsername, mediaData) {
+  async postTweet(runtime, client, tweetTextForPosting, roomId, rawTweetContent, twitterUsername, mediaData, isThreadPost, postsInThread) {
     try {
       elizaLogger4.log(`Posting new tweet:
 `);
@@ -1996,6 +2046,11 @@ var TwitterPostClient = class {
           void 0,
           mediaData
         );
+
+        if(isThreadPost && postsInThread.length) {
+          const postId = result.rest_id
+          await databaseRequest(`INSERT INTO threads (first_post_id, text) VALUES ($1, $2)`, [postId, JSON.stringify(postsInThread)])
+        }
       }
       const tweet = this.createTweetObject(
         result,
@@ -2010,7 +2065,7 @@ var TwitterPostClient = class {
         rawTweetContent
       );
     } catch (error) {
-      elizaLogger4.error("Error sending tweet:", error);
+      elizaLogger4.error("Error sending tweet:", error.message);
     }
   }
   /**
@@ -2033,8 +2088,6 @@ var TwitterPostClient = class {
         everythingResponse.json(),
         headlinesResponse.json()
       ]);
-
-      console.log("[everythingResponse, headlinesResponse]: ", [everythingData, headlinesData])
 
       const allArticles = [
         ...headlinesData.articles || [],
@@ -2069,9 +2122,86 @@ var TwitterPostClient = class {
       return "Sorry, there was an error fetching the news.";
     }
   }
-  async generateNewTweet(isNewsPost) {
+  buildThreads(tweets) {
+    tweets.reverse()
+    const threads = []
+
+    for (const tweet of tweets) {
+      const currentThread = [tweet]
+      if (tweet.id === tweet.conversationId) {
+        let currentTweetId = tweet.id
+        for (const item of tweets.filter((item) => item.id !== tweet.id)) {
+          if (item.inReplyToStatusId === currentTweetId){
+            currentThread.push(item)
+            currentTweetId = item.id
+          }
+        }
+      }
+
+      threads.push(currentThread)
+    }
+
+    return threads
+  }
+  async onThread(client, runtime) {
+    try {
+      const recentTweets = (await client.fetchSearchTweets(
+        `${this.twitterUsername}`,
+        20,
+        SearchMode3.Latest
+      )).tweets;
+      const threads = this.buildThreads(recentTweets)
+
+      const actuallyThread = (await databaseRequest('SELECT * FROM threads ORDER BY id DESC LIMIT 1'))[0]
+      console.log("actuallyThread: ", actuallyThread)
+      if (!actuallyThread) return false
+
+      const {first_post_id: postId, text} = actuallyThread
+
+      const currentThread = threads.find((thread) => thread[0].id === postId)
+      const currentTweetContent = JSON.parse(text).at(currentThread.length)
+      if(!currentTweetContent) {
+        return false
+      }
+
+      elizaLogger4.log(`Posting new tweet:`);
+
+      const result = await this.sendStandardTweet(
+        client,
+        currentTweetContent,
+        currentThread.at(-1).id
+      );
+
+      const tweet = this.createTweetObject(
+        result,
+        client,
+        this.twitterUsername
+      );
+
+      const roomId = stringToUuid4(
+        "twitter_generate_room-" + this.client.profile.username
+      );
+      await this.processAndCacheTweet(
+        runtime,
+        client,
+        tweet,
+        roomId,
+        currentTweetContent
+      );
+
+      console.log("new post: ", currentTweetContent)
+      return true
+    } catch (error) {
+      console.error("onThread error:", error.message);
+    }
+  }
+  async generateNewTweet(isNewsPost, isThreadPost) {
     elizaLogger4.log("Generating new tweet");
     try {
+      if (isThreadPost) {
+        const isCreatedReply = await this.onThread(this.client, this.runtime)
+        if (isCreatedReply) return
+      }
       const roomId = stringToUuid4(
         "twitter_generate_room-" + this.client.profile.username
       );
@@ -2099,24 +2229,28 @@ var TwitterPostClient = class {
         }
       );
       // console.log("state: ", state.news)
-      if(isNewsPost) {
-        // const formatted = templateStr.replace(/{{\w+}}/g, (match) => {
-        //   const key = match.replace(/{{|}}/g, "");
-        //   return state[key] ?? "";
-        // });
-        const response = await this.getCurrentNews('world')
-        console.log("news: ", response)
+      if(isNewsPost || isThreadPost) {
+
+        const response = await this.getCurrentNews('USA')
+        // databaseRequest
+        // console.log("news: ", response)
         state.news = response
       }
-      console.log("this.runtime.character.templates: ", this.runtime.character.templates)
+
+      let contextTemplate = ''
+      if (isNewsPost) {
+        contextTemplate = twitterNewsPostTemplate
+      }
+      else if (isThreadPost) {
+        contextTemplate = twitterThreadTemplate
+      }
+      else contextTemplate = twitterPostTemplate
+      
       const context = composeContext2({
         state,
-        // template: this.runtime.character.templates?.twitterPostTemplate || twitterNewsPostTemplate
-        template: this.runtime.character.templates?.twitterPostTemplate || (isNewsPost ? twitterNewsPostTemplate : twitterPostTemplate)
+        template: contextTemplate
       });
-      if(isNewsPost) {
-        console.log("context: ", context)
-      }
+      // console.log("state.recentPosts: ", state.recentPosts)
       // console.log('context: ', context)
       elizaLogger4.debug("generate post prompt:\n" + context);
       const response = await generateText({
@@ -2124,8 +2258,19 @@ var TwitterPostClient = class {
         context,
         modelClass: ModelClass2.SMALL
       });
+      let postsInThread
+      if (isThreadPost) {
+        postsInThread = response.split('///').filter(post => post.trim() !== '').map(post => {
+            return post.replace(/^\s*\d+\.\s*/, '').trim();
+        }).filter(post => post.length > 0);
+    }
+
+      // console.log("gpt response: ", response)
       const rawTweetContent = cleanJsonResponse(response);
       let tweetTextForPosting = null;
+      if(isThreadPost) {
+        tweetTextForPosting = postsInThread[0]
+      }
       let mediaData = null;
       const parsedResponse = parseJSONObjectFromText(rawTweetContent);
       if (parsedResponse?.text) {
@@ -2190,14 +2335,16 @@ var TwitterPostClient = class {
             roomId,
             rawTweetContent,
             this.twitterUsername,
-            mediaData
+            mediaData,
+            isThreadPost,
+            postsInThread
           );
         }
       } catch (error) {
-        elizaLogger4.error("Error sending tweet:", error);
+        elizaLogger4.error("Error sending tweet:", error.message);
       }
     } catch (error) {
-      elizaLogger4.error("Error generating new tweet:", error);
+      elizaLogger4.error("Error generating new tweet:", error.message);
     }
   }
   async generateTweetContent(tweetState, options) {
